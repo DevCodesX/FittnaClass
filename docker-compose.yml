@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  database:
+    image: mysql:8
+    container_name: fittnaclass_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fittnaclass
+    # No host port exposed — backend connects internally via database:3306
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: fittnaclass_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      - database
+    environment:
+      DB_HOST: database
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: fittnaclass
+      JWT_SECRET: fittnaclass_jwt_secret_key_2026
+      ENCRYPTION_KEY: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+      NODE_ENV: production
+      PORT: 5000
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    container_name: fittnaclass_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  backend_uploads:
