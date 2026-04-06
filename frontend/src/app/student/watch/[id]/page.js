@@ -23,6 +23,14 @@ export default function WatchPage() {
     const [currentLesson, setCurrentLesson] = useState(0);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [activeLiveSession, setActiveLiveSession] = useState(null);
+
+    // Installment state
+    const [installmentInfo, setInstallmentInfo] = useState(null);
+    const [showPayModal, setShowPayModal] = useState(false);
+    const [payReceiptFile, setPayReceiptFile] = useState(null);
+    const [payReceiptPreview, setPayReceiptPreview] = useState(null);
+    const [submittingPayment, setSubmittingPayment] = useState(false);
 
     // Player state
     const [playing, setPlaying] = useState(false);
@@ -36,19 +44,38 @@ export default function WatchPage() {
     const [showQualityMenu, setShowQualityMenu] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
+    const [videoError, setVideoError] = useState(false);
 
     useEffect(() => {
         async function fetchContent() {
             try {
-                const res = await studentAPI.getCourseContent(id);
-                setCourse(res.data.data);
-                setLessons(res.data.data?.contents || []);
+                const [res, liveRes] = await Promise.all([
+                    studentAPI.getCurriculumContent(id),
+                    studentAPI.getActiveLiveSession(id).catch(() => ({ data: { data: null } }))
+                ]);
+                const curriculum = res.data.data;
+                setCourse(curriculum);
+                setActiveLiveSession(liveRes.data?.data || null);
+
+                // Flatten sections → lessons into a single ordered array
+                const allLessons = [];
+                for (const section of curriculum?.sections || []) {
+                    for (const lesson of section.lessons || []) {
+                        allLessons.push({ ...lesson, sectionTitle: section.title });
+                    }
+                }
+                setLessons(allLessons);
+
+                // Set installment info if present
+                if (curriculum?.installment_info) {
+                    setInstallmentInfo(curriculum.installment_info);
+                }
             } catch (err) {
                 if (err.response?.status === 403) {
-                    toast.error('You do not have access to this course.');
+                    toast.error('ليس لديك صلاحية للوصول لهذا المقرر.');
                     router.push('/student/my-courses');
                 } else {
-                    toast.error('Failed to load course content.');
+                    toast.error('فشل تحميل محتوى المقرر.');
                 }
             } finally {
                 setLoading(false);
@@ -143,12 +170,39 @@ export default function WatchPage() {
     };
 
     const selectLesson = (index) => {
+        const lesson = lessons[index];
+        if (lesson?.is_locked) {
+            toast.error('هذا الدرس مقفل. ادفع القسط التالي لفتحه.');
+            return;
+        }
         setCurrentLesson(index);
         setPlaying(false);
         setCurrentTime(0);
+        setVideoError(false);
         if (videoRef.current) {
             videoRef.current.currentTime = 0;
             videoRef.current.pause();
+        }
+    };
+
+    const handlePayInstallment = async () => {
+        if (!payReceiptFile) {
+            toast.error('يرجى إرفاق إيصال الدفع.');
+            return;
+        }
+        setSubmittingPayment(true);
+        try {
+            const formData = new FormData();
+            formData.append('receipt', payReceiptFile);
+            await studentAPI.payInstallment(id, formData);
+            toast.success('تم إرسال إيصال القسط بنجاح! في انتظار الموافقة.');
+            setShowPayModal(false);
+            setPayReceiptFile(null);
+            setPayReceiptPreview(null);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'فشل في إرسال الإيصال.');
+        } finally {
+            setSubmittingPayment(false);
         }
     };
 
@@ -159,6 +213,12 @@ export default function WatchPage() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const currentLessonData = lessons[currentLesson];
+
+    useEffect(() => {
+        setVideoError(false);
+    }, [currentLessonData?.video_url]);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -166,8 +226,6 @@ export default function WatchPage() {
             </div>
         );
     }
-
-    const currentLessonData = lessons[currentLesson];
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col lg:flex-row">
@@ -186,7 +244,7 @@ export default function WatchPage() {
                     <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-medium truncate">{course?.title}</p>
                         <p className="text-slate-400 text-xs truncate">
-                            #{course?.course_code} · Lesson {currentLesson + 1} of {lessons.length}
+                            #{course?.course_code} · الدرس {currentLesson + 1} من {lessons.length}
                         </p>
                     </div>
                     <button
@@ -199,6 +257,54 @@ export default function WatchPage() {
                     </button>
                 </div>
 
+                {/* Active Live Session Banner */}
+                {activeLiveSession && (
+                    <div className="bg-red-600/20 border-b border-red-500/30 px-4 py-3 flex items-center justify-between animate-pulse">
+                        <div className="flex items-center gap-3">
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                            <div>
+                                <h4 className="text-red-100 font-bold text-sm">البث المباشر يعمل الآن: {activeLiveSession.title}</h4>
+                                {activeLiveSession.description && (
+                                    <p className="text-red-200/80 text-xs mt-0.5">{activeLiveSession.description}</p>
+                                )}
+                            </div>
+                        </div>
+                        <button 
+                            className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-colors"
+                            onClick={() => toast.success('تم الانضمام لغرفة الانتظار (سيتم تفعيل البث هنا)')}
+                        >
+                            انضم للبث
+                        </button>
+                    </div>
+                )}
+
+                {/* Installment Payment Progress */}
+                {installmentInfo && (
+                    <div className="px-4 py-3 bg-slate-800/50 border-b border-slate-700">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                            <span>دفعت {installmentInfo.paid_amount?.toFixed(2)} من {installmentInfo.total_price?.toFixed(2)} ج.م</span>
+                            <span>{installmentInfo.unlock_percentage?.toFixed(0)}% مفتوح</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
+                                style={{ width: `${installmentInfo.unlock_percentage || 0}%` }}
+                            />
+                        </div>
+                        {installmentInfo.unlock_percentage < 100 && (
+                            <button
+                                onClick={() => setShowPayModal(true)}
+                                className="mt-2 w-full py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors"
+                            >
+                                ادفع القسط التالي
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 {/* Video Player */}
                 <div
                     ref={containerRef}
@@ -208,12 +314,36 @@ export default function WatchPage() {
                 >
                     {currentLessonData?.video_url ? (
                         <>
+                            {videoError && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center z-10" onClick={(e) => e.stopPropagation()}>
+                                    <span className="text-4xl mb-4">⚠️</span>
+                                    <h3 className="text-white font-medium text-lg mb-2">Video Unavailable</h3>
+                                    <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
+                                        We're having trouble loading this video. The file might be missing or unsupported.
+                                    </p>
+                                    <button 
+                                        onClick={() => {
+                                            setVideoError(false);
+                                            if (videoRef.current) videoRef.current.load();
+                                        }}
+                                        className="px-4 py-2 bg-emerald hover:bg-emerald/90 text-white rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
+
                             <video
                                 ref={videoRef}
                                 src={currentLessonData.video_url}
-                                className="w-full h-full object-contain"
+                                className={`w-full h-full object-contain ${videoError ? 'invisible' : 'visible'}`}
+                                preload="metadata"
                                 onTimeUpdate={handleTimeUpdate}
                                 onLoadedMetadata={handleLoadedMetadata}
+                                onError={() => {
+                                    setVideoError(true);
+                                    setPlaying(false);
+                                }}
                                 onEnded={() => {
                                     setPlaying(false);
                                     if (currentLesson < lessons.length - 1) {
@@ -352,11 +482,11 @@ export default function WatchPage() {
                             <p className="text-5xl mb-4">🎥</p>
                             <p className="text-lg font-medium">
                                 {lessons.length > 0
-                                    ? 'Video URL will load here'
-                                    : 'No lessons available for this course yet'}
+                                    ? 'سيتم تحميل الفيديو هنا'
+                                    : 'لا توجد دروس في هذا المقرر بعد'}
                             </p>
                             <p className="text-sm text-white/30 mt-2">
-                                {currentLessonData?.video_url || 'Ask your instructor to add video content'}
+                                {currentLessonData?.video_url || 'اطلب من المعلم إضافة محتوى فيديو'}
                             </p>
                         </div>
                     )}
@@ -376,7 +506,7 @@ export default function WatchPage() {
                     } fixed lg:static right-0 top-0 bottom-0 z-50 lg:z-auto w-80 bg-slate-800 border-l border-slate-700 transition-transform lg:translate-x-0 overflow-y-auto`}
             >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 sticky top-0 bg-slate-800 z-10">
-                    <h3 className="text-white font-semibold text-sm">Course Content</h3>
+                    <h3 className="text-white font-semibold text-sm">محتوى المقرر</h3>
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="touch-target lg:hidden w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg"
@@ -389,37 +519,52 @@ export default function WatchPage() {
 
                 <div className="py-2">
                     {lessons.length === 0 ? (
-                        <p className="text-slate-400 text-sm text-center py-8">No lessons available</p>
+                        <p className="text-slate-400 text-sm text-center py-8">لا توجد دروس متاحة</p>
                     ) : (
                         lessons.map((lesson, index) => (
                             <button
                                 key={lesson.id}
                                 onClick={() => {
                                     selectLesson(index);
-                                    setSidebarOpen(false);
+                                    if (!lesson.is_locked) setSidebarOpen(false);
                                 }}
-                                className={`touch-target w-full text-left px-4 py-3.5 flex items-center gap-3 transition-colors ${index === currentLesson
-                                        ? 'bg-emerald/10 border-l-2 border-emerald'
-                                        : 'hover:bg-white/5 border-l-2 border-transparent'
+                                className={`touch-target w-full text-left px-4 py-3.5 flex items-center gap-3 transition-colors ${lesson.is_locked
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : index === currentLesson
+                                            ? 'bg-emerald/10 border-l-2 border-emerald'
+                                            : 'hover:bg-white/5 border-l-2 border-transparent'
                                     }`}
                             >
                                 <div
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${index === currentLesson
-                                            ? 'bg-emerald text-white'
-                                            : 'bg-slate-700 text-slate-300'
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${lesson.is_locked
+                                            ? 'bg-slate-600 text-slate-400'
+                                            : index === currentLesson
+                                                ? 'bg-emerald text-white'
+                                                : 'bg-slate-700 text-slate-300'
                                         }`}
                                 >
-                                    {index + 1}
+                                    {lesson.is_locked ? (
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    ) : (
+                                        index + 1
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p
-                                        className={`text-sm font-medium truncate ${index === currentLesson ? 'text-emerald' : 'text-slate-300'
+                                        className={`text-sm font-medium truncate ${lesson.is_locked
+                                                ? 'text-slate-500'
+                                                : index === currentLesson ? 'text-emerald' : 'text-slate-300'
                                             }`}
                                     >
                                         {lesson.title}
                                     </p>
+                                    {lesson.is_locked && (
+                                        <p className="text-[10px] text-slate-500">مقفل — ادفع القسط التالي</p>
+                                    )}
                                 </div>
-                                {index === currentLesson && (
+                                {!lesson.is_locked && index === currentLesson && (
                                     <div className="w-2 h-2 bg-emerald rounded-full flex-shrink-0" />
                                 )}
                             </button>
@@ -434,6 +579,62 @@ export default function WatchPage() {
                     className="fixed inset-0 bg-black/50 z-40 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
+            )}
+
+            {/* Pay Next Installment Modal */}
+            {showPayModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative animate-slide-up">
+                        <button onClick={() => setShowPayModal(false)} className="absolute left-4 top-4 text-slate-400 hover:text-slate-600">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+
+                        <h2 className="text-lg font-bold text-slate-800 mb-1 text-right">ادفع القسط التالي</h2>
+                        <p className="text-sm text-slate-500 mb-5 text-right">
+                            القسط {(installmentInfo?.approved_count || 0) + 1} من {installmentInfo?.total_installments}
+                        </p>
+
+                        <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-primary/40 transition-colors cursor-pointer relative mb-4">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        setPayReceiptFile(file);
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => setPayReceiptPreview(ev.target.result);
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            {payReceiptPreview ? (
+                                <div className="space-y-2">
+                                    <img src={payReceiptPreview} alt="Receipt" className="max-h-40 mx-auto rounded-xl" />
+                                    <p className="text-sm text-emerald-600 font-medium">✓ تم إرفاق الإيصال</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-3xl mb-2">📸</p>
+                                    <p className="text-sm font-medium text-slate-600">انقر لإرفاق إيصال الدفع</p>
+                                </>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handlePayInstallment}
+                            disabled={submittingPayment || !payReceiptFile}
+                            className="w-full h-12 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                        >
+                            {submittingPayment ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                'إرسال الإيصال'
+                            )}
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -2,22 +2,22 @@ const { Enrollment } = require('../models');
 
 /**
  * Ensures the requesting student has an 'approved' enrollment
- * for the course specified by req.params.id.
+ * for the curriculum specified by req.params.id.
  */
 async function ensureApprovedEnrollment(req, res, next) {
     try {
-        // Instructors can always access their own course content
+        // Instructors can always access their own curriculum content
         if (req.user.role === 'instructor') {
             return next();
         }
 
-        const courseId = req.params.id;
+        const curriculumId = req.params.id;
         const studentId = req.user.id;
 
         const enrollment = await Enrollment.findOne({
             where: {
                 student_id: studentId,
-                course_id: courseId,
+                curriculum_id: curriculumId,
                 status: 'approved',
             },
         });
@@ -25,7 +25,7 @@ async function ensureApprovedEnrollment(req, res, next) {
         if (!enrollment) {
             return res.status(403).json({
                 success: false,
-                message: 'Access denied. You must have an approved enrollment to access this content.',
+                message: 'غير مسموح. يجب أن يكون لديك تسجيل مقبول للوصول لهذا المحتوى.',
             });
         }
 

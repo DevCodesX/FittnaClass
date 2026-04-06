@@ -42,6 +42,11 @@ const Course = sequelize.define('Course', {
         allowNull: false,
         defaultValue: 0.00,
     },
+    is_free_lesson: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
     status: {
         type: DataTypes.ENUM('draft', 'published'),
         allowNull: false,

@@ -57,46 +57,85 @@ export default function MyCoursesPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {courses.map((item, i) => (
-                        <Link
-                            key={item.enrollment_id}
-                            href={`/student/watch/${item.course?.id}`}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group animate-slide-up"
-                            style={{ animationDelay: `${i * 0.05}s` }}
-                        >
-                            <div className="h-36 sm:h-40 bg-gradient-to-br from-emerald/10 to-primary/10 flex items-center justify-center relative overflow-hidden">
-                                <div className="text-4xl opacity-50 group-hover:scale-110 transition-transform duration-300">
-                                    🎥
-                                </div>
-                                <div className="absolute top-3 left-3">
-                                    <span className="px-2.5 py-1 bg-emerald text-white text-xs font-mono font-bold rounded-lg shadow-sm">
-                                        #{item.course?.course_code}
-                                    </span>
-                                </div>
-                                <div className="absolute bottom-3 right-3">
-                                    <span className="px-2.5 py-1 bg-white/90 backdrop-blur text-emerald-dark text-xs font-bold rounded-lg">
-                                        ▶ Watch
-                                    </span>
-                                </div>
-                            </div>
+                    {courses.map((item, i) => {
+                        const isPending = item.status === 'pending';
+                        const CardWrapper = isPending ? 'div' : Link;
+                        const wrapperProps = isPending ? {
+                            className: "bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative opacity-90 transition-all animate-slide-up",
+                            style: { animationDelay: `${i * 0.05}s` }
+                        } : {
+                            href: `/student/watch/${item.course?.id}`,
+                            className: "bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group animate-slide-up",
+                            style: { animationDelay: `${i * 0.05}s` }
+                        };
 
-                            <div className="p-4 sm:p-5">
-                                <h3 className="font-semibold text-slate-800 mb-1.5 line-clamp-2 text-sm sm:text-base group-hover:text-primary transition-colors">
-                                    {item.course?.title}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span className="text-[9px] font-bold text-primary">
-                                            {item.course?.instructor?.name?.charAt(0)?.toUpperCase()}
+                        return (
+                            <CardWrapper
+                                key={item.enrollment_id}
+                                {...wrapperProps}
+                            >
+                                <div className="h-36 sm:h-40 bg-gradient-to-br from-emerald/10 to-primary/10 flex items-center justify-center relative overflow-hidden">
+                                    {item.course?.thumbnail_url ? (
+                                        <img src={item.course.thumbnail_url} alt={item.course?.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="text-4xl opacity-50 group-hover:scale-110 transition-transform duration-300">
+                                            🎥
+                                        </div>
+                                    )}
+                                    <div className="absolute top-3 left-3">
+                                        <span className="px-2.5 py-1 bg-emerald text-white text-xs font-mono font-bold rounded-lg shadow-sm">
+                                            #{item.course?.course_code}
                                         </span>
                                     </div>
-                                    <span className="text-xs text-slate-500 truncate">
-                                        {item.course?.instructor?.name}
-                                    </span>
+                                    {Number(item.course?.price) === 0 && (
+                                        <div className="absolute top-3 right-3">
+                                            <span className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-xs font-extrabold">FREE</span>
+                                        </div>
+                                    )}
+                                    {isPending ? (
+                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center p-4 text-center">
+                                           <span className="text-emerald-700 font-semibold bg-white/90 px-3 py-2 rounded-lg text-sm shadow-sm ring-1 ring-emerald/20">قيد المراجعة</span>
+                                        </div>
+                                    ) : (
+                                        <div className="absolute bottom-3 right-3">
+                                            <span className="px-2.5 py-1 bg-white/90 backdrop-blur text-emerald-dark text-xs font-bold rounded-lg">
+                                                ▶ Watch
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+
+                                <div className="p-4 sm:p-5">
+                                    {isPending ? (
+                                        <div className="text-center py-2">
+                                            <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <span className="text-amber-500 text-lg">⏳</span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                                تم إرسال طلبك بنجاح، برجاء انتظار مراجعة الدفع من المدرس
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <h3 className="font-semibold text-slate-800 mb-1.5 line-clamp-2 text-sm sm:text-base group-hover:text-primary transition-colors">
+                                                {item.course?.title}
+                                            </h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-[9px] font-bold text-primary">
+                                                        {item.course?.instructor?.name?.charAt(0)?.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs text-slate-500 truncate">
+                                                    {item.course?.instructor?.name}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </CardWrapper>
+                        );
+                    })}
                 </div>
             )}
         </div>

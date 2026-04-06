@@ -21,9 +21,9 @@ export default function StudentProfilePage() {
     });
 
     const [enrolledCourses] = useState([
-        { id: 1, code: 'PHY-101', title: 'Physics Fundamentals for Sec 3', instructor: 'Dr. Tarek Saleh' },
-        { id: 2, code: 'MAT-203', title: 'Advanced Calculus & Algebra', instructor: 'Eng. Youssef Kamel' },
-        { id: 3, code: 'CHM-102', title: 'Organic Chemistry Mastery', instructor: 'Dr. Mona Hassan' },
+        { id: 1, code: 'PHY-101', title: 'Physics Fundamentals for Sec 3', teacher: 'Dr. Tarek Saleh' },
+        { id: 2, code: 'MAT-203', title: 'Advanced Calculus & Algebra', teacher: 'Eng. Youssef Kamel' },
+        { id: 3, code: 'CHM-102', title: 'Organic Chemistry Mastery', teacher: 'Dr. Mona Hassan' },
     ]);
 
     return (
@@ -143,7 +143,7 @@ export default function StudentProfilePage() {
                                                 </span>
                                             </div>
                                             <h3 className="font-semibold text-[#1E293B] text-sm sm:text-base truncate group-hover:text-[#0F2B5B] transition-colors">{course.title}</h3>
-                                            <p className="text-xs text-[#64748B] truncate">{course.instructor}</p>
+                                            <p className="text-xs text-[#64748B] truncate">{course.teacher}</p>
                                         </div>
                                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-[#94A3B8] group-hover:bg-[#10B981] group-hover:text-white transition-colors shrink-0">
                                             <span className="material-symbols-outlined text-[18px]">play_arrow</span>
@@ -189,6 +189,44 @@ export default function StudentProfilePage() {
                                     <div>
                                         <p className="text-xl font-bold text-[#1E293B] leading-none mb-1">{user.stats.certificates}</p>
                                         <p className="text-xs font-medium text-[#64748B]">Certificates Earned</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Referral & Wallet Card */}
+                        <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8 animate-fade-in" style={{ animationDelay: '0.25s' }}>
+                            <h2 className="text-lg font-bold text-[#1E293B] mb-5">الإحالة والمحفظة</h2>
+
+                            <div className="space-y-4">
+                                {/* Referral Code */}
+                                <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-emerald/5 border border-primary/10">
+                                    <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-2">كود الإحالة الخاص بك</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg font-mono font-bold text-primary tracking-widest">{user.referralCode || '------'}</span>
+                                        <button
+                                            onClick={() => {
+                                                if (user.referralCode) {
+                                                    navigator.clipboard.writeText(user.referralCode);
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-lg hover:bg-white/80 transition-colors"
+                                            title="نسخ الكود"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px] text-[#64748B]">content_copy</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-[#64748B] mt-2">شارك هذا الكود مع أصدقائك واحصل على رصيد عند تسجيلهم!</p>
+                                </div>
+
+                                {/* Wallet Balance */}
+                                <div className="flex items-center gap-4 p-3 rounded-xl bg-amber-50/80 border border-amber-100">
+                                    <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <span className="material-symbols-outlined">account_balance_wallet</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-xl font-bold text-[#1E293B] leading-none mb-1">{user.walletBalance?.toFixed(2) || '0.00'} ج.م</p>
+                                        <p className="text-xs font-medium text-[#64748B]">رصيد المحفظة</p>
                                     </div>
                                 </div>
                             </div>

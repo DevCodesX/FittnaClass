@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
-import { authAPI } from '@/lib/api';
+import { authAPI, inviteAPI } from '@/lib/api';
 import {
   loginSchema,
   registerStep1Schema,
   registerStudentStep2Schema,
-  registerInstructorStep2Schema,
+  registerTeacherStep2Schema,
   validateForm,
 } from '@/lib/validators';
+import ForgotPasswordModal from '../profile/ForgotPasswordModal';
+import { validateNationalIdRealtime } from '@/lib/nationalId';
+import FloatingLabelInput from '@/components/ui/FloatingLabelInput';
 
 const GRADE_LEVELS = [
   'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6',
@@ -22,15 +25,23 @@ function Icon({ name, className = '' }) {
 }
 
 const GAP = '20px';
-const INPUT_H = 'h-12';
-const LABEL = 'text-xs text-slate-400 font-medium';
 
-export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange }) {
+// Helper for real-time validation of single fields
+const validateFieldRealtime = (schema, field, value) => {
+  if (!schema || !schema.shape[field]) return '';
+  const result = schema.shape[field].safeParse(value);
+  return result.success ? '' : result.error.errors[0].message;
+};
+
+export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange, inviteToken }) {
   const { login: authLogin } = useAuth();
   const toast = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [errors, setErrors] = useState({});
+  const [inviteData, setInviteData] = useState(null);
+  const [nationalIdValidation, setNationalIdValidation] = useState(null);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({
     name: '',
@@ -42,33 +53,83 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
     specialization: '',
     subject: '',
     bio: '',
+    referred_by_code: '',
   });
 
+  const isInviteMode = !!inviteToken;
+
+  // Load invite data and pre-fill email
   useEffect(() => {
-    setRegisterForm((current) => ({ ...current, role }));
-  }, [role]);
+    if (inviteToken) {
+      inviteAPI.verify(inviteToken)
+        .then((res) => {
+          setInviteData(res.data.data);
+          // Pre-fill the email from invite
+          setRegisterForm((f) => ({ ...f, email: res.data.data.email || '', role: 'instructor' }));
+          setLoginForm((f) => ({ ...f, email: res.data.data.email || '' }));
+        })
+        .catch(() => {
+          // Invite may be expired/used, still allow registration
+          setInviteData(null);
+        });
+    }
+  }, [inviteToken]);
+
+  useEffect(() => {
+    if (!isInviteMode) {
+      setRegisterForm((current) => ({ ...current, role }));
+    }
+  }, [role, isInviteMode]);
 
   useEffect(() => {
     setErrors({});
     setStep(1);
   }, [mode]);
 
-  const inputCls = (field, ltr = false) => {
-    const state = errors[field]
-      ? 'border-rose/60 bg-rose/5 focus:border-rose focus:ring-rose/8'
-      : 'border-slate-200/80 bg-slate-50/60 focus:border-primary/50 focus:bg-white focus:ring-primary/8';
-    return `${INPUT_H} w-full rounded-xl border px-4 text-[13px] text-slate-800 placeholder:text-slate-300 outline-none transition-all duration-200 focus:ring-[3px] ${state} ${ltr ? 'text-left' : 'text-right'}`;
-  };
-
   const handleLoginChange = ({ target }) => {
-    setLoginForm((current) => ({ ...current, [target.name]: target.value }));
-    if (errors[target.name]) setErrors((current) => ({ ...current, [target.name]: '' }));
+    const { name, value } = target;
+    setLoginForm((current) => ({ ...current, [name]: value }));
+    const errorMsg = validateFieldRealtime(loginSchema, name, value);
+    setErrors((current) => ({ ...current, [name]: errorMsg }));
   };
 
   const handleRegisterChange = ({ target }) => {
-    setRegisterForm((current) => ({ ...current, [target.name]: target.value }));
-    if (errors[target.name]) setErrors((current) => ({ ...current, [target.name]: '' }));
+    const { name, value } = target;
+    setRegisterForm((current) => ({ ...current, [name]: value }));
+    
+    // Choose schema based on step and role
+    let schema = registerStep1Schema;
+    if (step === 2) {
+      schema = role === 'student' ? registerStudentStep2Schema : registerTeacherStep2Schema;
+    }
+    const errorMsg = validateFieldRealtime(schema, name, value);
+    setErrors((current) => ({ ...current, [name]: errorMsg }));
+    
+    if (name === 'national_id') {
+      if (value === '') {
+        setNationalIdValidation(null);
+      } else {
+        setNationalIdValidation(validateNationalIdRealtime(value));
+      }
+    }
   };
+
+  // ─── Post-auth: accept invite ─────────────────
+  async function handlePostAuthInvite(user, token) {
+    if (!inviteToken) return;
+
+    // Store token for auth context to use
+    localStorage.setItem('fittnaclass_pending_invite', inviteToken);
+
+    try {
+      await inviteAPI.accept(inviteToken);
+      localStorage.removeItem('fittnaclass_pending_invite');
+      toast.success('تم قبول الدعوة! أنت الآن مشرف على المقرر.');
+    } catch (err) {
+      // If it fails (email mismatch, etc.), the invite page can handle it later
+      console.error('[Invite accept after auth]', err.response?.data?.message);
+    }
+  }
 
   const submitLogin = async (event) => {
     event.preventDefault();
@@ -83,12 +144,64 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
     try {
       const response = await authAPI.login(loginForm);
       toast.success('تم تسجيل الدخول بنجاح.');
+
+      // Accept invite before redirecting
+      if (isInviteMode) {
+        // Set the token first so the accept call has auth
+        localStorage.setItem('fittnaclass_token', response.data.data.token);
+        localStorage.setItem('fittnaclass_user', JSON.stringify(response.data.data.user));
+        await handlePostAuthInvite(response.data.data.user, response.data.data.token);
+      }
+
       authLogin(response.data.data.user, response.data.data.token);
     } catch (error) {
       if (error.code === 'ERR_NETWORK') {
         toast.error('الخادم غير متاح الآن. تأكد من تشغيل Backend على المنفذ الصحيح.');
       } else {
         toast.error(error.response?.data?.message || 'تعذر تسجيل الدخول، حاول مرة أخرى.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Invite-mode: submit directly (no step 2) ─
+  const submitInviteRegister = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      name: registerForm.name,
+      email: registerForm.email,
+      password: registerForm.password,
+      role: 'instructor',
+    };
+    const validation = validateForm(registerStep1Schema, payload);
+    if (!validation.success) {
+      setErrors(validation.errors);
+      return;
+    }
+
+    setErrors({});
+    setLoading(true);
+    try {
+      const response = await authAPI.register({
+        ...payload,
+        specialization: 'مشرف',
+        subject: 'إدارة',
+      });
+      toast.success('تم إنشاء الحساب بنجاح.');
+
+      // Accept invite before redirecting
+      localStorage.setItem('fittnaclass_token', response.data.data.token);
+      localStorage.setItem('fittnaclass_user', JSON.stringify(response.data.data.user));
+      await handlePostAuthInvite(response.data.data.user, response.data.data.token);
+
+      authLogin(response.data.data.user, response.data.data.token);
+    } catch (error) {
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('الخادم غير متاح الآن. تأكد من تشغيل Backend على المنفذ الصحيح.');
+      } else {
+        toast.error(error.response?.data?.message || 'تعذر إنشاء الحساب، حاول مرة أخرى.');
       }
     } finally {
       setLoading(false);
@@ -113,7 +226,13 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
 
   const submitRegister = async (event) => {
     event.preventDefault();
-    const schema = role === 'student' ? registerStudentStep2Schema : registerInstructorStep2Schema;
+
+    if (role === 'student' && nationalIdValidation?.status === 'invalid') {
+        toast.error('يرجى التأكد من أن الرقم القومي صحيح للتسجيل.');
+        return;
+    }
+
+    const schema = role === 'student' ? registerStudentStep2Schema : registerTeacherStep2Schema;
     const payload = role === 'student'
       ? { national_id: registerForm.national_id, grade_level: registerForm.grade_level }
       : { specialization: registerForm.specialization, subject: registerForm.subject, bio: registerForm.bio };
@@ -151,17 +270,53 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
     { id: 'login', label: 'تسجيل الدخول', icon: 'login' },
   ];
 
+  // ─── Invite Banner ──────────────────────────
+  const InviteBanner = () => (
+    <div className="mb-5 rounded-xl bg-gradient-to-r from-[#6C63FF]/10 to-[#6C63FF]/5 border border-[#6C63FF]/20 p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-full bg-[#6C63FF]/15 flex items-center justify-center">
+          <span className="text-lg">🛡️</span>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-800">دعوة للإشراف</p>
+          <p className="text-[11px] text-slate-500">
+            {inviteData?.curriculum?.title && (
+              <>على مقرر <strong>{inviteData.curriculum.title}</strong></>
+            )}
+            {inviteData?.inviter?.name && (
+              <> — من {inviteData.inviter.name}</>
+            )}
+          </p>
+        </div>
+      </div>
+      {inviteData?.email && (
+        <p className="text-[11px] text-[#6C63FF] font-mono" dir="ltr">
+          {inviteData.email}
+        </p>
+      )}
+    </div>
+  );
+
   return (
-    <article className="w-full rounded-3xl border border-slate-200/70 bg-white shadow-[0_24px_64px_-20px_rgba(15,23,42,0.18)]">
+    <article className="form-card w-full rounded-3xl border border-[#E5E7EB] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08)]">
       <div style={{ padding: '24px 28px 28px' }}>
+        {/* Invite banner */}
+        {isInviteMode && inviteData && <InviteBanner />}
+
         <header className="mb-6 text-right">
           <h3 className="text-xl font-extrabold leading-snug tracking-tight text-slate-900">
-            {mode === 'register' ? 'ابدأ خلال دقائق' : 'مرحبًا بعودتك'}
+            {isInviteMode
+              ? (mode === 'login' ? 'تسجيل الدخول كمشرف' : 'إنشاء حساب مشرف')
+              : (mode === 'register' ? 'ابدأ خلال دقائق' : 'مرحبًا بعودتك')}
           </h3>
           <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
-            {mode === 'register'
-              ? 'أنشئ حسابك للوصول إلى الدروس والاختبارات وخطة مذاكرة مناسبة لمستواك.'
-              : 'سجّل الدخول لمتابعة تقدمك واستكمال دروسك من حيث توقفت.'}
+            {isInviteMode
+              ? (mode === 'login'
+                ? 'سجّل الدخول لقبول الدعوة والانضمام كمشرف على المقرر.'
+                : 'أنشئ حسابك بسرعة لقبول الدعوة والبدء بالإشراف.')
+              : (mode === 'register'
+                ? 'أنشئ حسابك للوصول إلى الدروس والاختبارات وخطة مذاكرة مناسبة لمستواك.'
+                : 'سجّل الدخول لمتابعة تقدمك واستكمال دروسك من حيث توقفت.')}
           </p>
         </header>
 
@@ -171,49 +326,119 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
             className="text-right"
             style={{ display: 'flex', flexDirection: 'column', gap: GAP }}
           >
-            <div>
-              <label htmlFor="l-email" className={`mb-1.5 block ${LABEL}`}>البريد الإلكتروني</label>
-              <input
-                id="l-email"
-                type="email"
-                name="email"
-                value={loginForm.email}
-                onChange={handleLoginChange}
-                autoComplete="email"
-                dir="ltr"
-                className={inputCls('email', true)}
-                placeholder="name@example.com"
-              />
-              {errors.email && <p className="mt-1 text-[11px] font-medium text-rose">{errors.email}</p>}
-            </div>
+            <FloatingLabelInput
+              id="l-email"
+              name="email"
+              type="email"
+              label="البريد الإلكتروني"
+              value={loginForm.email}
+              onChange={handleLoginChange}
+              autoComplete="email"
+              dir="ltr"
+              error={errors.email}
+              startIcon="mail"
+            />
 
             <div>
-              <label htmlFor="l-pass" className={`mb-1.5 block ${LABEL}`}>كلمة المرور</label>
-              <input
+              <FloatingLabelInput
                 id="l-pass"
-                type="password"
                 name="password"
+                type="password"
+                label="كلمة المرور"
                 value={loginForm.password}
                 onChange={handleLoginChange}
                 autoComplete="current-password"
                 dir="ltr"
-                className={inputCls('password', true)}
-                placeholder="********"
+                error={errors.password}
+                startIcon="lock"
               />
-              {errors.password && <p className="mt-1 text-[11px] font-medium text-rose">{errors.password}</p>}
+              <div className="flex justify-end mt-2">
+                  <button 
+                      type="button" 
+                      onClick={() => setIsForgotModalOpen(true)}
+                      className="text-[12px] font-semibold text-primary hover:text-primary-dark transition-colors"
+                  >
+                      نسيت كلمة السر؟
+                  </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[13px] font-bold text-white transition-all duration-200 hover:bg-primary-dark hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+              className="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[14px] font-bold text-white transition-all duration-300 hover:bg-primary-dark hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
             >
               {loading
-                ? <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                : <><Icon name="arrow_forward" className="text-base" />دخول إلى حسابك</>}
+                ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                : <><Icon name="arrow_forward" className="text-lg" />{isInviteMode ? 'دخول وقبول الدعوة' : 'دخول إلى حسابك'}</>}
+            </button>
+          </form>
+        ) : isInviteMode ? (
+          /* ═══ Invite Registration (simplified — no role, no step 2) ═══ */
+          <form
+            onSubmit={submitInviteRegister}
+            className="text-right"
+            style={{ display: 'flex', flexDirection: 'column', gap: GAP }}
+          >
+            <FloatingLabelInput
+              id="r-name"
+              name="name"
+              type="text"
+              label="الاسم الكامل"
+              value={registerForm.name}
+              onChange={handleRegisterChange}
+              autoComplete="name"
+              error={errors.name}
+              startIcon="person"
+            />
+
+            <div>
+              <FloatingLabelInput
+                id="r-email"
+                name="email"
+                type="email"
+                label="البريد الإلكتروني"
+                value={registerForm.email}
+                onChange={handleRegisterChange}
+                autoComplete="email"
+                dir="ltr"
+                error={errors.email}
+                startIcon="mail"
+                readOnly={!!inviteData?.email}
+              />
+              {inviteData?.email && (
+                <p className="mt-1 text-[11px] text-[#6C63FF]">هذا البريد مرتبط بالدعوة ولا يمكن تغييره.</p>
+              )}
+            </div>
+
+            <div>
+              <FloatingLabelInput
+                id="r-pass"
+                name="password"
+                type="password"
+                label="كلمة المرور"
+                value={registerForm.password}
+                onChange={handleRegisterChange}
+                autoComplete="new-password"
+                dir="ltr"
+                error={errors.password}
+                startIcon="lock"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">الحد الأدنى 6 أحرف.</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6C63FF] to-[#5A54E6] text-[14px] font-bold text-white transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:shadow-[#6C63FF]/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+            >
+              {loading
+                ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                : <><Icon name="shield_person" className="text-lg" />إنشاء حساب وقبول الدعوة</>}
             </button>
           </form>
         ) : (
+          /* ═══ Normal Registration (with role + step 2) ═══ */
           <div className="text-right">
             <div className="mb-6">
               <div className="mb-2 flex items-center justify-between">
@@ -240,8 +465,8 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
                       type="button"
                       onClick={() => onRoleChange('student')}
                       className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-[12px] font-bold transition-all duration-200 ${role === 'student'
-                        ? 'bg-white text-primary shadow-sm'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'bg-white text-primary ring-1 ring-[#E5E7EB] shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                       }`}
                     >
                       <Icon name="school" className="text-[16px]" />
@@ -251,8 +476,8 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
                       type="button"
                       onClick={() => onRoleChange('instructor')}
                       className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-[12px] font-bold transition-all duration-200 ${role === 'instructor'
-                        ? 'bg-white text-secondary shadow-sm'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'bg-white text-secondary ring-1 ring-[#E5E7EB] shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                       }`}
                     >
                       <Icon name="co_present" className="text-[16px]" />
@@ -262,61 +487,65 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
                   {errors.role && <p className="mt-1 px-1 text-[11px] font-medium text-rose">{errors.role}</p>}
                 </div>
 
-                <div>
-                  <label htmlFor="r-name" className={`mb-1.5 block ${LABEL}`}>الاسم الكامل</label>
-                  <input
-                    id="r-name"
-                    type="text"
-                    name="name"
-                    value={registerForm.name}
-                    onChange={handleRegisterChange}
-                    autoComplete="name"
-                    className={inputCls('name')}
-                    placeholder="مثال: أحمد محمد"
-                  />
-                  {errors.name && <p className="mt-1 text-[11px] font-medium text-rose">{errors.name}</p>}
-                </div>
+                <FloatingLabelInput
+                  id="r-name"
+                  name="name"
+                  type="text"
+                  label="الاسم الكامل"
+                  value={registerForm.name}
+                  onChange={handleRegisterChange}
+                  autoComplete="name"
+                  error={errors.name}
+                  startIcon="person"
+                />
+
+                <FloatingLabelInput
+                  id="r-email"
+                  name="email"
+                  type="email"
+                  label="البريد الإلكتروني"
+                  value={registerForm.email}
+                  onChange={handleRegisterChange}
+                  autoComplete="email"
+                  dir="ltr"
+                  error={errors.email}
+                  startIcon="mail"
+                />
 
                 <div>
-                  <label htmlFor="r-email" className={`mb-1.5 block ${LABEL}`}>البريد الإلكتروني</label>
-                  <input
-                    id="r-email"
-                    type="email"
-                    name="email"
-                    value={registerForm.email}
-                    onChange={handleRegisterChange}
-                    autoComplete="email"
-                    dir="ltr"
-                    className={inputCls('email', true)}
-                    placeholder="name@example.com"
-                  />
-                  {errors.email && <p className="mt-1 text-[11px] font-medium text-rose">{errors.email}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="r-pass" className={`mb-1.5 block ${LABEL}`}>كلمة المرور</label>
-                  <input
+                  <FloatingLabelInput
                     id="r-pass"
-                    type="password"
                     name="password"
+                    type="password"
+                    label="كلمة المرور"
                     value={registerForm.password}
                     onChange={handleRegisterChange}
                     autoComplete="new-password"
                     dir="ltr"
-                    className={inputCls('password', true)}
-                    placeholder="********"
+                    error={errors.password}
+                    startIcon="lock"
                   />
-                  <p className="mt-1 text-[11px] text-slate-300">الحد الأدنى 6 أحرف.</p>
-                  {errors.password && <p className="mt-0.5 text-[11px] font-medium text-rose">{errors.password}</p>}
+                  <p className="mt-1 text-[11px] text-slate-400">الحد الأدنى 6 أحرف.</p>
                 </div>
+
+                <FloatingLabelInput
+                  id="r-referral"
+                  name="referred_by_code"
+                  type="text"
+                  label="كود الإحالة (اختياري)"
+                  value={registerForm.referred_by_code}
+                  onChange={handleRegisterChange}
+                  dir="ltr"
+                  startIcon="group_add"
+                />
 
                 <button
                   type="button"
                   onClick={goToStepTwo}
-                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-[13px] font-bold text-white transition-all duration-200 hover:opacity-90 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98]"
+                  className="mt-1 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-[14px] font-bold text-white transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98]"
                 >
                   التالي
-                  <Icon name="arrow_forward" className="text-base" />
+                  <Icon name="arrow_forward" className="text-lg" />
                 </button>
               </div>
             ) : (
@@ -324,73 +553,91 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
                 {role === 'student' ? (
                   <>
                     <div>
-                      <label htmlFor="r-nid" className={`mb-1.5 block ${LABEL}`}>الرقم القومي</label>
-                      <input
+                      <FloatingLabelInput
                         id="r-nid"
-                        type="text"
                         name="national_id"
+                        type="text"
+                        label="الرقم القومي"
                         value={registerForm.national_id}
                         onChange={handleRegisterChange}
                         dir="ltr"
                         maxLength={14}
-                        className={inputCls('national_id', true)}
-                        placeholder="14 رقم"
+                        error={!nationalIdValidation ? errors.national_id : ''}
+                        success={nationalIdValidation?.status === 'valid'}
+                        startIcon="badge"
                       />
-                      {errors.national_id && <p className="mt-1 text-[11px] font-medium text-rose">{errors.national_id}</p>}
+                      {/* Note: In floating label we show error, but we override here for warnings if we want */}
+                      {nationalIdValidation && (
+                          <div className={`mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium ${
+                              nationalIdValidation.status === 'valid' ? 'text-emerald-500' : 
+                              nationalIdValidation.status === 'warning' ? 'text-amber-500' : 'text-rose'
+                          }`}>
+                              <Icon name={
+                                  nationalIdValidation.status === 'valid' ? 'check_circle' : 
+                                  nationalIdValidation.status === 'warning' ? 'warning' : 'error'
+                              } className="text-[14px]" />
+                              <span>{nationalIdValidation.message}</span>
+                              {(nationalIdValidation.data?.age !== undefined) && (
+                                  <span className="text-slate-400 mr-2 text-[10px] bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-md">
+                                      العمر المتوقع: {nationalIdValidation.data.age}
+                                  </span>
+                              )}
+                          </div>
+                      )}
                     </div>
                     <div>
-                      <label htmlFor="r-grade" className={`mb-1.5 block ${LABEL}`}>المرحلة الدراسية</label>
-                      <select
-                        id="r-grade"
-                        name="grade_level"
-                        value={registerForm.grade_level}
-                        onChange={handleRegisterChange}
-                        dir="ltr"
-                        className={inputCls('grade_level', true)}
-                      >
-                        <option value="">Select grade level</option>
-                        {GRADE_LEVELS.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
-                      </select>
-                      {errors.grade_level && <p className="mt-1 text-[11px] font-medium text-rose">{errors.grade_level}</p>}
+                      {/* Used standard select styling adapted for unified UI */}
+                      <label htmlFor="r-grade" className="mb-1.5 block text-xs text-slate-400 font-medium">المرحلة الدراسية</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 material-symbols-outlined">school</span>
+                        <select
+                          id="r-grade"
+                          name="grade_level"
+                          value={registerForm.grade_level}
+                          onChange={handleRegisterChange}
+                          dir="ltr"
+                          className="w-full h-14 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 pl-10 py-3 text-[13px] text-slate-800 outline-none transition-all duration-300 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 hover:border-slate-300 appearance-none disabled:opacity-50"
+                        >
+                          <option value="">Select grade level</option>
+                          {GRADE_LEVELS.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                        </select>
+                      </div>
+                      {errors.grade_level && <p className="mt-1 text-[11.5px] font-medium text-rose">{errors.grade_level}</p>}
                     </div>
                   </>
                 ) : (
                   <>
+                    <FloatingLabelInput
+                      id="r-spec"
+                      name="specialization"
+                      type="text"
+                      label="التخصص"
+                      value={registerForm.specialization}
+                      onChange={handleRegisterChange}
+                      error={errors.specialization}
+                      startIcon="category"
+                    />
+
+                    <FloatingLabelInput
+                      id="r-subj"
+                      name="subject"
+                      type="text"
+                      label="المادة الأساسية"
+                      value={registerForm.subject}
+                      onChange={handleRegisterChange}
+                      error={errors.subject}
+                      startIcon="menu_book"
+                    />
+
                     <div>
-                      <label htmlFor="r-spec" className={`mb-1.5 block ${LABEL}`}>التخصص</label>
-                      <input
-                        id="r-spec"
-                        type="text"
-                        name="specialization"
-                        value={registerForm.specialization}
-                        onChange={handleRegisterChange}
-                        className={inputCls('specialization')}
-                        placeholder="مثال: رياضيات أو فيزياء"
-                      />
-                      {errors.specialization && <p className="mt-1 text-[11px] font-medium text-rose">{errors.specialization}</p>}
-                    </div>
-                    <div>
-                      <label htmlFor="r-subj" className={`mb-1.5 block ${LABEL}`}>المادة الأساسية</label>
-                      <input
-                        id="r-subj"
-                        type="text"
-                        name="subject"
-                        value={registerForm.subject}
-                        onChange={handleRegisterChange}
-                        className={inputCls('subject')}
-                        placeholder="المادة التي تدرّسها"
-                      />
-                      {errors.subject && <p className="mt-1 text-[11px] font-medium text-rose">{errors.subject}</p>}
-                    </div>
-                    <div>
-                      <label htmlFor="r-bio" className={`mb-1.5 block ${LABEL}`}>نبذة قصيرة</label>
+                      <label htmlFor="r-bio" className="mb-1.5 block text-xs text-slate-400 font-medium">نبذة قصيرة</label>
                       <textarea
                         id="r-bio"
                         name="bio"
                         value={registerForm.bio}
                         onChange={handleRegisterChange}
-                        className="min-h-24 w-full rounded-xl border border-slate-200/80 bg-slate-50/60 px-4 py-3 text-right text-[13px] leading-relaxed text-slate-800 placeholder:text-slate-300 outline-none transition-all duration-200 focus:border-primary/50 focus:bg-white focus:ring-[3px] focus:ring-primary/8"
-                        placeholder="أخبر الطلاب عن خبرتك أو أسلوب الشرح."
+                        className="w-full min-h-[100px] rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-right text-[13px] leading-relaxed text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-300 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 hover:border-slate-300 disabled:opacity-50"
+                        placeholder="أخبر الطلاب عن خبرتك أو أسلوب الشرح..."
                       />
                     </div>
                   </>
@@ -403,19 +650,19 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
                       setStep(1);
                       setErrors({});
                     }}
-                    className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-50 hover:text-slate-600 active:scale-[0.98]"
+                    className="flex h-14 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold text-slate-400 transition-all duration-300 hover:bg-slate-50 hover:text-slate-600 active:scale-[0.98] border border-transparent hover:border-slate-200"
                   >
-                    <Icon name="arrow_back" className="text-base" />
+                    <Icon name="arrow_back" className="text-lg" />
                     رجوع
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-xl bg-primary text-[13px] font-bold text-white transition-all duration-200 hover:bg-primary-dark hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+                    className="flex h-14 flex-[2] items-center justify-center gap-2 rounded-xl bg-primary text-[14px] font-bold text-white transition-all duration-300 hover:bg-primary-dark hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
                   >
                     {loading
-                      ? <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      : <><Icon name="check_circle" className="text-base" />إنشاء الحساب</>}
+                      ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      : <><Icon name="check_circle" className="text-lg" />إنشاء الحساب</>}
                   </button>
                 </div>
               </form>
@@ -423,25 +670,31 @@ export default function LandingAuthCard({ mode, role, onModeChange, onRoleChange
           </div>
         )}
 
-        <div className="mt-6 border-t border-slate-100 pt-4">
-          <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-50/80 p-1.5">
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50/80 p-1.5 shadow-inner">
             {modeTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => switchMode(tab.id)}
-                className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-[12px] font-bold transition-all duration-200 ${mode === tab.id
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-slate-400 hover:text-slate-600'
+                className={`flex h-11 items-center justify-center gap-1.5 rounded-lg text-[13px] font-bold transition-all duration-300 ${mode === tab.id
+                  ? 'bg-white text-primary ring-1 ring-[#E5E7EB] shadow-sm'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                 }`}
               >
-                <Icon name={tab.icon} className="text-[16px]" />
+                <Icon name={tab.icon} className="text-[18px]" />
                 {tab.label}
               </button>
             ))}
           </div>
         </div>
       </div>
+      
+      <ForgotPasswordModal 
+          isOpen={isForgotModalOpen} 
+          onClose={() => setIsForgotModalOpen(false)} 
+          initialEmail={loginForm.email}
+      />
     </article>
   );
 }

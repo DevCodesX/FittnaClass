@@ -1,6 +1,6 @@
 export default function CourseSearch({ query, onQueryChange, onSubmit, isSearching }) {
     return (
-        <form onSubmit={onSubmit} className="mb-8 w-full sm:mb-12 group">
+        <form onSubmit={onSubmit} className="mb-4 w-full sm:mb-6 group">
             <div className="mx-auto w-full max-w-4xl relative z-20">
                 <label htmlFor="explore-search" className="sr-only">
                     ابحث عن مادة أو مقرر...

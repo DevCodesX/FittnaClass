@@ -1,0 +1,158 @@
+﻿
+> fittnaclass-backend@1.0.0 test
+> node --test test/enrollment.workflow.test.js
+
+Executing (default): SELECT 1+1 AS result
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'users' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `users`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'users' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): ALTER TABLE `users` CHANGE `name` `name` VARCHAR(100) NOT NULL;
+Executing (default): ALTER TABLE `users` CHANGE `email` `email` VARCHAR(255) NOT NULL UNIQUE;
+Executing (default): ALTER TABLE `users` CHANGE `password` `password` VARCHAR(255) NOT NULL;
+Executing (default): ALTER TABLE `users` CHANGE `national_id` `national_id` TEXT COMMENT 'AES-256 encrypted, students only';
+Executing (default): ALTER TABLE `users` CHANGE `grade_level` `grade_level` VARCHAR(50) COMMENT 'Students only';
+Executing (default): ALTER TABLE `users` CHANGE `role` `role` ENUM('instructor', 'student') NOT NULL;
+Executing (default): ALTER TABLE `users` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `users` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `users`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'instructor_profiles' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `instructor_profiles`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'instructor_profiles' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='instructor_profiles' AND constraint_name = 'instructor_profiles_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `instructor_profiles` DROP FOREIGN KEY `instructor_profiles_ibfk_1`;
+Executing (default): ALTER TABLE `instructor_profiles` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `instructor_profiles` CHANGE `specialization` `specialization` VARCHAR(100);
+Executing (default): ALTER TABLE `instructor_profiles` CHANGE `subject` `subject` VARCHAR(100);
+Executing (default): ALTER TABLE `instructor_profiles` CHANGE `bio` `bio` TEXT;
+Executing (default): ALTER TABLE `instructor_profiles` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `instructor_profiles` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `instructor_profiles`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'payment_methods' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `payment_methods`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'payment_methods' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='payment_methods' AND constraint_name = 'payment_methods_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `payment_methods` DROP FOREIGN KEY `payment_methods_ibfk_1`;
+Executing (default): ALTER TABLE `payment_methods` ADD FOREIGN KEY (`instructor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `payment_methods` CHANGE `provider` `provider` ENUM('vodafone_cash', 'instapay', 'fawry', 'other') NOT NULL;
+Executing (default): ALTER TABLE `payment_methods` CHANGE `wallet_number` `wallet_number` VARCHAR(50) NOT NULL;
+Executing (default): ALTER TABLE `payment_methods` CHANGE `details` `details` TEXT;
+Executing (default): ALTER TABLE `payment_methods` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `payment_methods` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `payment_methods`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'courses' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `courses`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'courses' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): ALTER TABLE `courses` CHANGE `course_code` `course_code` VARCHAR(10) NOT NULL UNIQUE COMMENT 'Unique code in FT-XXXX format';
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='courses' AND constraint_name = 'courses_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `courses` DROP FOREIGN KEY `courses_ibfk_1`;
+Executing (default): ALTER TABLE `courses` ADD FOREIGN KEY (`instructor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `courses` CHANGE `title` `title` VARCHAR(255) NOT NULL;
+Executing (default): ALTER TABLE `courses` CHANGE `description` `description` TEXT;
+Executing (default): ALTER TABLE `courses` CHANGE `subject` `subject` VARCHAR(100) NOT NULL;
+Executing (default): ALTER TABLE `courses` CHANGE `category` `category` VARCHAR(100);
+Executing (default): ALTER TABLE `courses` CHANGE `price` `price` DECIMAL(10,2) NOT NULL DEFAULT 0;
+Executing (default): ALTER TABLE `courses` CHANGE `status` `status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft';
+Executing (default): ALTER TABLE `courses` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `courses` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `courses` CHANGE `is_free_lesson` `is_free_lesson` TINYINT(1) NOT NULL DEFAULT false;
+Executing (default): SHOW INDEX FROM `courses`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'enrollments' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `enrollments`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'enrollments' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='enrollments' AND constraint_name = 'enrollments_ibfk_11' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `enrollments` DROP FOREIGN KEY `enrollments_ibfk_11`;
+Executing (default): ALTER TABLE `enrollments` ADD FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='enrollments' AND constraint_name = 'enrollments_ibfk_12' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `enrollments` DROP FOREIGN KEY `enrollments_ibfk_12`;
+Executing (default): ALTER TABLE `enrollments` ADD FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `enrollments` CHANGE `payment_receipt_url` `payment_receipt_url` VARCHAR(500);
+Executing (default): ALTER TABLE `enrollments` CHANGE `status` `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending';
+Executing (default): ALTER TABLE `enrollments` CHANGE `enrollment_date` `enrollment_date` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `enrollments` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `enrollments` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `enrollments` CHANGE `receipt_uploaded_at` `receipt_uploaded_at` DATETIME;
+Executing (default): ALTER TABLE `enrollments` CHANGE `reviewed_at` `reviewed_at` DATETIME;
+Executing (default): SHOW INDEX FROM `enrollments`
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'contents' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `contents`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'contents' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='contents' AND constraint_name = 'contents_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `contents` DROP FOREIGN KEY `contents_ibfk_1`;
+Executing (default): ALTER TABLE `contents` ADD FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `contents` CHANGE `video_url` `video_url` VARCHAR(500) NOT NULL;
+Executing (default): ALTER TABLE `contents` CHANGE `thumbnail_url` `thumbnail_url` VARCHAR(500);
+Executing (default): ALTER TABLE `contents` CHANGE `title` `title` VARCHAR(255) NOT NULL;
+Executing (default): ALTER TABLE `contents` CHANGE `duration` `duration` VARCHAR(20) COMMENT 'Duration string e.g. 08:45';
+Executing (default): ALTER TABLE `contents` CHANGE `quality` `quality` VARCHAR(20) DEFAULT 'HD 1080p';
+Executing (default): ALTER TABLE `contents` CHANGE `file_size` `file_size` BIGINT COMMENT 'Original file size in bytes';
+Executing (default): ALTER TABLE `contents` CHANGE `original_filename` `original_filename` VARCHAR(255);
+Executing (default): ALTER TABLE `contents` CHANGE `order` `order` INTEGER NOT NULL DEFAULT 0;
+Executing (default): ALTER TABLE `contents` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `contents` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `contents`
+[Ingress] POST /api/auth/register | Content-Type: application/json
+[Ingress] Raw Body: {"name":"Enrollment Teacher","email":"enroll_teacher_1773723146189@test.com","password":"password123","role":"instructor"}
+Executing (default): SELECT `id`, `name`, `email`, `password`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`email` = 'enroll_teacher_1773723146189@test.com';
+Executing (default): INSERT INTO `users` (`id`,`name`,`email`,`password`,`national_id`,`grade_level`,`role`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+Executing (default): INSERT INTO `instructor_profiles` (`id`,`user_id`,`specialization`,`subject`,`bio`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?);
+[Ingress] POST /api/instructor/payment-settings | Content-Type: application/json
+[Ingress] Raw Body: {"provider":"vodafone_cash","wallet_number":"01012345678","details":"Test VF"}
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 25;
+Executing (0346190f-63b8-45ef-9178-40bd5aec55c9): START TRANSACTION;
+Executing (0346190f-63b8-45ef-9178-40bd5aec55c9): SELECT `id`, `instructor_id`, `provider`, `wallet_number`, `details`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `payment_methods` AS `PaymentMethod` WHERE `PaymentMethod`.`instructor_id` = 25 AND `PaymentMethod`.`provider` = 'vodafone_cash' LIMIT 1 FOR UPDATE;
+Executing (0346190f-63b8-45ef-9178-40bd5aec55c9): INSERT INTO `payment_methods` (`id`,`instructor_id`,`provider`,`wallet_number`,`details`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?);
+Executing (0346190f-63b8-45ef-9178-40bd5aec55c9): SELECT `id`, `instructor_id`, `provider`, `wallet_number`, `details`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `payment_methods` AS `PaymentMethod` WHERE `PaymentMethod`.`instructor_id` = 25 AND `PaymentMethod`.`provider` = 'vodafone_cash' LIMIT 1;
+Executing (0346190f-63b8-45ef-9178-40bd5aec55c9): COMMIT;
+payment_settings_saved { userId: 25, provider: 'vodafone_cash', success: true, latencyMs: 8 }
+[Ingress] POST /api/instructor/courses | Content-Type: application/json
+[Ingress] Raw Body: {"title":"Idempotency Test Course","subject":"Math","category":"Science","price":150,"is_free_lesson":false}
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 25;
+Executing (default): SELECT `course_code` FROM `courses` AS `Course` ORDER BY `Course`.`id` DESC LIMIT 1;
+Executing (default): SELECT `id`, `course_code`, `instructor_id`, `title`, `description`, `subject`, `category`, `price`, `is_free_lesson`, `status`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `courses` AS `Course` WHERE `Course`.`course_code` = 'FT-1002';
+Executing (default): INSERT INTO `courses` (`id`,`course_code`,`instructor_id`,`title`,`subject`,`category`,`price`,`is_free_lesson`,`status`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?);
+[Ingress] POST /api/auth/register | Content-Type: application/json
+[Ingress] Raw Body: {"name":"Enrollment Student","email":"enroll_student_1773723146504@test.com","password":"password123","role":"student","grade_level":"Grade 10","national_id":"12345678901234"}
+Executing (default): SELECT `id`, `name`, `email`, `password`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`email` = 'enroll_student_1773723146504@test.com';
+Executing (default): INSERT INTO `users` (`id`,`name`,`email`,`password`,`national_id`,`grade_level`,`role`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+[Ingress] POST /api/courses/10/enroll | Content-Type: undefined
+[Ingress] Raw Body: 
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 26;
+Executing (default): SELECT `Course`.`id`, `Course`.`course_code`, `Course`.`instructor_id`, `Course`.`title`, `Course`.`description`, `Course`.`subject`, `Course`.`category`, `Course`.`price`, `Course`.`is_free_lesson`, `Course`.`status`, `Course`.`created_at` AS `createdAt`, `Course`.`updated_at` AS `updatedAt`, `instructor`.`id` AS `instructor.id`, `instructor`.`name` AS `instructor.name`, `instructor->paymentMethods`.`id` AS `instructor.paymentMethods.id`, `instructor->paymentMethods`.`instructor_id` AS `instructor.paymentMethods.instructor_id`, `instructor->paymentMethods`.`provider` AS `instructor.paymentMethods.provider`, `instructor->paymentMethods`.`wallet_number` AS `instructor.paymentMethods.wallet_number`, `instructor->paymentMethods`.`details` AS `instructor.paymentMethods.details`, `instructor->paymentMethods`.`created_at` AS `instructor.paymentMethods.createdAt`, `instructor->paymentMethods`.`updated_at` AS `instructor.paymentMethods.updatedAt` FROM `courses` AS `Course` LEFT OUTER JOIN `users` AS `instructor` ON `Course`.`instructor_id` = `instructor`.`id` LEFT OUTER JOIN `payment_methods` AS `instructor->paymentMethods` ON `instructor`.`id` = `instructor->paymentMethods`.`instructor_id` WHERE `Course`.`id` = '10';
+Executing (default): SELECT `id`, `student_id`, `course_id`, `payment_receipt_url`, `status`, `receipt_uploaded_at`, `reviewed_at`, `enrollment_date`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `enrollments` AS `Enrollment` WHERE `Enrollment`.`student_id` = 26 AND `Enrollment`.`course_id` = '10' LIMIT 1;
+Executing (default): INSERT INTO `enrollments` (`id`,`student_id`,`course_id`,`payment_receipt_url`,`status`,`receipt_uploaded_at`,`enrollment_date`,`created_at`,`updated_at`) VALUES (DEFAULT,?,?,?,?,?,?,?,?);
+Γû╢ Enrollment Workflow API Integration Tests
+  [32mΓ£ö Student enrolls without receipt, should create pending enrollment (Step 1) [90m(20.5832ms)[39m[39m
+[Ingress] POST /api/courses/10/enroll | Content-Type: undefined
+[Ingress] Raw Body: 
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 26;
+Executing (default): SELECT `Course`.`id`, `Course`.`course_code`, `Course`.`instructor_id`, `Course`.`title`, `Course`.`description`, `Course`.`subject`, `Course`.`category`, `Course`.`price`, `Course`.`is_free_lesson`, `Course`.`status`, `Course`.`created_at` AS `createdAt`, `Course`.`updated_at` AS `updatedAt`, `instructor`.`id` AS `instructor.id`, `instructor`.`name` AS `instructor.name`, `instructor->paymentMethods`.`id` AS `instructor.paymentMethods.id`, `instructor->paymentMethods`.`instructor_id` AS `instructor.paymentMethods.instructor_id`, `instructor->paymentMethods`.`provider` AS `instructor.paymentMethods.provider`, `instructor->paymentMethods`.`wallet_number` AS `instructor.paymentMethods.wallet_number`, `instructor->paymentMethods`.`details` AS `instructor.paymentMethods.details`, `instructor->paymentMethods`.`created_at` AS `instructor.paymentMethods.createdAt`, `instructor->paymentMethods`.`updated_at` AS `instructor.paymentMethods.updatedAt` FROM `courses` AS `Course` LEFT OUTER JOIN `users` AS `instructor` ON `Course`.`instructor_id` = `instructor`.`id` LEFT OUTER JOIN `payment_methods` AS `instructor->paymentMethods` ON `instructor`.`id` = `instructor->paymentMethods`.`instructor_id` WHERE `Course`.`id` = '10';
+Executing (default): SELECT `id`, `student_id`, `course_id`, `payment_receipt_url`, `status`, `receipt_uploaded_at`, `reviewed_at`, `enrollment_date`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `enrollments` AS `Enrollment` WHERE `Enrollment`.`student_id` = 26 AND `Enrollment`.`course_id` = '10' LIMIT 1;
+  [32mΓ£ö Student enrolls again, should return 200 OK (Idempotency Step 2) [90m(13.6843ms)[39m[39m
+[Ingress] POST /api/enrollments/3/upload-receipt | Content-Type: multipart/form-data; boundary=--------------------------6aad063b0df5b6c094e42d86
+[Ingress] Raw Body: 
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 26;
+Executing (default): SELECT `id`, `student_id`, `course_id`, `payment_receipt_url`, `status`, `receipt_uploaded_at`, `reviewed_at`, `enrollment_date`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `enrollments` AS `Enrollment` WHERE `Enrollment`.`id` = '3' AND `Enrollment`.`student_id` = 26;
+Executing (default): UPDATE `enrollments` SET `payment_receipt_url`=?,`receipt_uploaded_at`=?,`updated_at`=? WHERE `id` = ?
+  [32mΓ£ö Student uploads receipt to existing enrollment via upload-receipt endpoint (Step 3) [90m(23.5256ms)[39m[39m
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 25;
+Executing (default): SELECT `Enrollment`.`id`, `Enrollment`.`student_id`, `Enrollment`.`course_id`, `Enrollment`.`payment_receipt_url`, `Enrollment`.`status`, `Enrollment`.`receipt_uploaded_at`, `Enrollment`.`reviewed_at`, `Enrollment`.`enrollment_date`, `Enrollment`.`created_at` AS `createdAt`, `Enrollment`.`updated_at` AS `updatedAt`, `course`.`id` AS `course.id`, `course`.`course_code` AS `course.course_code`, `course`.`title` AS `course.title`, `course`.`subject` AS `course.subject`, `student`.`id` AS `student.id`, `student`.`name` AS `student.name`, `student`.`email` AS `student.email`, `student`.`grade_level` AS `student.grade_level` FROM `enrollments` AS `Enrollment` INNER JOIN `courses` AS `course` ON `Enrollment`.`course_id` = `course`.`id` AND `course`.`instructor_id` = 25 LEFT OUTER JOIN `users` AS `student` ON `Enrollment`.`student_id` = `student`.`id` WHERE `Enrollment`.`status` = 'pending' ORDER BY `Enrollment`.`enrollment_date` ASC;
+[Ingress] PATCH /api/instructor/enrollments/3/approve | Content-Type: application/json
+[Ingress] Raw Body: {"status":"approved"}
+Executing (default): SELECT `id`, `name`, `email`, `national_id`, `grade_level`, `role`, `created_at` AS `createdAt`, `updated_at` AS `updatedAt` FROM `users` AS `User` WHERE `User`.`id` = 25;
+Executing (default): SELECT `Enrollment`.`id`, `Enrollment`.`student_id`, `Enrollment`.`course_id`, `Enrollment`.`payment_receipt_url`, `Enrollment`.`status`, `Enrollment`.`receipt_uploaded_at`, `Enrollment`.`reviewed_at`, `Enrollment`.`enrollment_date`, `Enrollment`.`created_at` AS `createdAt`, `Enrollment`.`updated_at` AS `updatedAt`, `course`.`id` AS `course.id`, `course`.`course_code` AS `course.course_code`, `course`.`instructor_id` AS `course.instructor_id`, `course`.`title` AS `course.title`, `course`.`description` AS `course.description`, `course`.`subject` AS `course.subject`, `course`.`category` AS `course.category`, `course`.`price` AS `course.price`, `course`.`is_free_lesson` AS `course.is_free_lesson`, `course`.`status` AS `course.status`, `course`.`created_at` AS `course.createdAt`, `course`.`updated_at` AS `course.updatedAt` FROM `enrollments` AS `Enrollment` INNER JOIN `courses` AS `course` ON `Enrollment`.`course_id` = `course`.`id` AND `course`.`instructor_id` = 25 WHERE `Enrollment`.`id` = '3';
+Executing (default): UPDATE `enrollments` SET `status`=?,`reviewed_at`=?,`updated_at`=? WHERE `id` = ?
+Executing (default): DELETE FROM `enrollments` WHERE `id` = 3
+  [32mΓ£ö Teacher views pending students and approves the payment (Step 4) [90m(20.2884ms)[39m[39m
+Executing (default): DELETE FROM `courses` WHERE `id` = 10
+Executing (default): DELETE FROM `payment_methods` WHERE `instructor_id` = 25
+Executing (default): DELETE FROM `users` WHERE `id` = 25
+Executing (default): DELETE FROM `users` WHERE `id` = 26
+[32mΓ£ö Enrollment Workflow API Integration Tests [90m(1951.6539ms)[39m[39m
+[34mΓä╣ tests 4[39m
+[34mΓä╣ suites 1[39m
+[34mΓä╣ pass 4[39m
+[34mΓä╣ fail 0[39m
+[34mΓä╣ cancelled 0[39m
+[34mΓä╣ skipped 0[39m
+[34mΓä╣ todo 0[39m
+[34mΓä╣ duration_ms 2643.5188[39m

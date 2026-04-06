@@ -1,6 +1,9 @@
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ConfirmProvider } from "@/context/ConfirmContext";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 export const metadata = {
   title: "FittnaClass | منصة الثانوية العامة والأزهرية",
@@ -18,13 +21,20 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased" style={{ fontFamily: "'Noto Sans Arabic', 'Lexend', sans-serif" }}>
+      <body className="antialiased" style={{ fontFamily: "'Cairo', sans-serif" }}>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <PermissionsProvider>
+            <ConfirmProvider>
+              <ToastProvider>
+                {children}
+                <ConfirmationModal />
+              </ToastProvider>
+            </ConfirmProvider>
+          </PermissionsProvider>
         </AuthProvider>
       </body>
     </html>

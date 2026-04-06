@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LandingAuthCard from '@/components/landing/AuthCard';
 
@@ -18,20 +18,44 @@ const HERO_METRICS = [
 
 const SUBJECT_GROUPS = [
   {
-    title: 'مواد الثانوية العامة',
-    desc: 'كل المواد الأساسية في مكان واحد بتقسيم واضح يساعدك تبدأ المذاكرة بسرعة.',
+    title: 'عامة علمي علوم',
+    desc: 'الفيزياء والكيمياء والأحياء والجيولوجيا وغيرها لطلاب الشعبة العلمية علوم.',
     tone: 'border-primary/20',
     chip: 'bg-primary/10 text-primary',
     cta: 'bg-primary text-white hover:bg-primary-dark',
-    items: ['العربية', 'الإنجليزية', 'الرياضيات', 'الفيزياء', 'الكيمياء', 'الأحياء'],
+    items: ['الفيزياء', 'الكيمياء', 'الأحياء', 'الجيولوجيا', 'الرياضيات'],
   },
   {
-    title: 'مواد الثانوية الأزهرية',
-    desc: 'عرض واضح ومنظم للمواد الأزهرية الأساسية مع نفس تجربة التصفح السهلة.',
+    title: 'عامة علمي رياضة',
+    desc: 'الرياضيات البحتة والتطبيقية وباقي المواد لطلاب الشعبة العلمية رياضة.',
+    tone: 'border-blue-500/20',
+    chip: 'bg-blue-500/10 text-blue-600',
+    cta: 'bg-blue-600 text-white hover:bg-blue-700',
+    items: ['الفيزياء', 'الكيمياء', 'الرياضيات البحتة', 'الرياضيات التطبيقية'],
+  },
+  {
+    title: 'عامة أدبي',
+    desc: 'التاريخ والجغرافيا والفلسفة وعلم النفس لطلاب الشعبة الأدبية.',
+    tone: 'border-purple-500/20',
+    chip: 'bg-purple-500/10 text-purple-600',
+    cta: 'bg-purple-600 text-white hover:bg-purple-700',
+    items: ['التاريخ', 'الجغرافيا', 'الفلسفة والمنطق', 'علم النفس والاجتماع'],
+  },
+  {
+    title: 'أزهرية علمي',
+    desc: 'المواد العلمية والشرعية لطلاب الثانوية الأزهرية الشعبة العلمية.',
     tone: 'border-secondary/20',
     chip: 'bg-secondary/10 text-secondary',
     cta: 'bg-secondary text-white hover:bg-emerald-dark',
-    items: ['التفسير', 'الحديث', 'الفقه', 'النحو', 'البلاغة', 'المنطق'],
+    items: ['الفيزياء', 'الكيمياء', 'الأحياء', 'الفقه', 'التفسير', 'الحديث'],
+  },
+  {
+    title: 'أزهرية أدبي',
+    desc: 'المواد الشرعية واللغوية والأدبية لطلاب الثانوية الأزهرية الشعبة الأدبية.',
+    tone: 'border-teal-500/20',
+    chip: 'bg-teal-500/10 text-teal-600',
+    cta: 'bg-teal-600 text-white hover:bg-teal-700',
+    items: ['الفقه', 'التفسير', 'الحديث', 'النحو والصرف', 'البلاغة', 'المنطق'],
   },
 ];
 
@@ -58,11 +82,12 @@ function SectionHeading({ eyebrow, title, description }) {
   );
 }
 
-export default function LandingPage() {
+function LandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authMode = searchParams.get('auth') === 'login' ? 'login' : 'register';
-  const authRole = searchParams.get('role') === 'instructor' ? 'instructor' : 'student';
+  const inviteToken = searchParams.get('invite') || null;
+  const authRole = inviteToken ? 'instructor' : (searchParams.get('role') === 'instructor' ? 'instructor' : 'student');
 
   useEffect(() => {
     if (!searchParams.get('auth')) {
@@ -81,6 +106,10 @@ export default function LandingPage() {
       params.set('role', role);
     } else {
       params.delete('role');
+    }
+    // Preserve invite token across auth state changes
+    if (inviteToken) {
+      params.set('invite', inviteToken);
     }
     router.replace(`/?${params.toString()}`, { scroll: false });
     if (shouldScroll) {
@@ -195,6 +224,7 @@ export default function LandingPage() {
                     role={authRole}
                     onModeChange={(nextMode, nextRole) => updateAuthState(nextMode, nextRole ?? authRole)}
                     onRoleChange={(nextRole) => updateAuthState('register', nextRole)}
+                    inviteToken={inviteToken}
                   />
                 </div>
               </div>
@@ -381,5 +411,17 @@ export default function LandingPage() {
         </SectionContainer>
       </footer>
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background-light flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    }>
+      <LandingContent />
+    </Suspense>
   );
 }

@@ -1,4 +1,5 @@
 const { body } = require('express-validator');
+const { validateCoursePricing } = require('./freeLessonValidation');
 
 const registerValidation = [
     body('name')
@@ -18,7 +19,7 @@ const registerValidation = [
 
     body('role')
         .notEmpty().withMessage('Role is required')
-        .isIn(['instructor', 'student']).withMessage('Role must be instructor or student'),
+        .isIn(['instructor', 'student', 'assistant']).withMessage('Role must be instructor, student, or assistant'),
 
     body('national_id')
         .if(body('role').equals('student'))
@@ -41,10 +42,10 @@ const loginValidation = [
         .notEmpty().withMessage('Password is required'),
 ];
 
-const courseValidation = [
+const curriculumValidation = [
     body('title')
         .trim()
-        .notEmpty().withMessage('Course title is required')
+        .notEmpty().withMessage('Curriculum title is required')
         .isLength({ max: 255 }).withMessage('Title must not exceed 255 characters'),
 
     body('description')
@@ -59,28 +60,46 @@ const courseValidation = [
         .optional()
         .trim(),
 
+    body('grade_level')
+        .optional()
+        .trim(),
+
+    body('is_free_lesson')
+        .optional()
+        .isBoolean().withMessage('is_free_lesson must be true or false')
+        .toBoolean(),
+
     body('price')
-        .notEmpty().withMessage('Price is required')
-        .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+        .custom((value, { req }) => {
+            const isFreeLesson = req.body.is_free_lesson === true || req.body.is_free_lesson === 'true';
+            const result = validateCoursePricing({ price: value, isFreeLesson });
+            if (!result.valid) {
+                throw new Error(result.message);
+            }
+            return true;
+        }),
 ];
 
 const paymentSettingsValidation = [
     body('provider')
-        .notEmpty().withMessage('Payment provider is required')
+        .exists({ checkNull: true, checkFalsy: true }).withMessage('Payment provider is missing or empty')
+        .isString().withMessage('Payment provider must be a string')
         .isIn(['vodafone_cash', 'instapay', 'fawry', 'other']).withMessage('Invalid payment provider'),
 
     body('wallet_number')
-        .notEmpty().withMessage('Wallet number is required')
-        .isLength({ max: 50 }).withMessage('Wallet number must not exceed 50 characters'),
+        .exists({ checkNull: true, checkFalsy: true }).withMessage('Wallet number is missing or empty')
+        .isString().withMessage('Wallet number must be a string')
+        .isLength({ min: 1, max: 50 }).withMessage('Wallet number must be between 1 and 50 characters'),
 
     body('details')
-        .optional()
+        .optional({ nullable: true, checkFalsy: true })
+        .isString().withMessage('Details must be a string')
         .trim(),
 ];
 
 module.exports = {
     registerValidation,
     loginValidation,
-    courseValidation,
+    curriculumValidation,
     paymentSettingsValidation,
 };

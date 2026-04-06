@@ -8,33 +8,6 @@ import CourseSearch from '@/components/student/explore/CourseSearch';
 import CourseFilters from '@/components/student/explore/CourseFilters';
 import CourseGrid from '@/components/student/explore/CourseGrid';
 
-const COURSE_FILTERS = [
-    { id: 'all', label: 'جميع المقررات' },
-    { id: 'general', label: 'مواد العام' },
-    { id: 'azhar', label: 'مواد الأزهر' },
-];
-
-const AZHAR_KEYWORDS = [
-    'azhar',
-    'al azhar',
-    'al-azhar',
-    'الأزهر',
-    'ازهر',
-    'فقه',
-    'حديث',
-    'تفسير',
-    'قرآن',
-    'الفقه',
-    'الشريعة',
-    'العقيدة',
-];
-
-function detectCourseTrack(course) {
-    const source = `${course.title || ''} ${course.subject || ''} ${course.category || ''}`.toLowerCase();
-    const isAzharCourse = AZHAR_KEYWORDS.some((keyword) => source.includes(keyword));
-    return isAzharCourse ? 'azhar' : 'general';
-}
-
 function useDebounce(value, delay) {
     const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -59,14 +32,37 @@ export default function ExploreContent() {
     const debouncedQuery = useDebounce(query, 500);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState('all');
     const [isSearching, setIsSearching] = useState(false);
 
-    const fetchCourses = useCallback(async (searchTerm = '') => {
+    // Hierarchical Filters
+    const [educationType, setEducationType] = useState('all');
+    const [stage, setStage] = useState('all');
+    const [gradeLevel, setGradeLevel] = useState('all');
+    const [track, setTrack] = useState('all');
+    const [subject, setSubject] = useState('all');
+    const [isFreeOnly, setIsFreeOnly] = useState(false);
+
+    const fetchCourses = useCallback(async (
+        searchTerm = '', 
+        educationTypeVal = 'all', 
+        stageVal = 'all', 
+        gradeLevelVal = 'all', 
+        trackVal = 'all', 
+        subjectVal = 'all', 
+        freeVal = false
+    ) => {
         setLoading(true);
         setIsSearching(true);
         try {
-            const response = await studentAPI.exploreCourses(searchTerm.trim());
+            const response = await studentAPI.exploreCurricula(
+                searchTerm.trim(), 
+                educationTypeVal, 
+                stageVal, 
+                gradeLevelVal, 
+                trackVal, 
+                subjectVal, 
+                freeVal
+            );
             const payload = Array.isArray(response?.data?.data) ? response.data.data : [];
             setCourses(payload);
         } catch {
@@ -84,35 +80,45 @@ export default function ExploreContent() {
         }
     }, [initialQuery]);
 
-    // Fetch when debounced query changes
+    // Fetch when query or filters change
     useEffect(() => {
-        fetchCourses(debouncedQuery);
-        // Optionally update URL
-        const params = new URLSearchParams(searchParams.toString());
-        if (debouncedQuery) {
-            params.set('q', debouncedQuery);
-        } else {
-            params.delete('q');
-        }
-        // router.replace(`?${params.toString()}`, { scroll: false });
-    }, [debouncedQuery, fetchCourses, searchParams]);
+        fetchCourses(debouncedQuery, educationType, stage, gradeLevel, track, subject, isFreeOnly);
+    }, [debouncedQuery, educationType, stage, gradeLevel, track, subject, isFreeOnly, fetchCourses]);
 
+    // Reset children dynamically when parent changes implemented via wrapper setters
+    const handleSetEducationType = (val) => {
+        setEducationType(val);
+        setStage('all');
+        setGradeLevel('all');
+        setTrack('all');
+        setSubject('all');
+    };
 
-    const visibleCourses = useMemo(() => {
-        if (activeFilter === 'all') {
-            return courses;
-        }
-        return courses.filter((course) => detectCourseTrack(course) === activeFilter);
-    }, [courses, activeFilter]);
+    const handleSetStage = (val) => {
+        setStage(val);
+        setGradeLevel('all');
+        setTrack('all');
+        setSubject('all');
+    };
+
+    const handleSetGradeLevel = (val) => {
+        setGradeLevel(val);
+        setTrack('all'); // Grade shouldn't technically reset track but usually these are selected linearly
+        setSubject('all');
+    };
+
+    const handleSetTrack = (val) => {
+        setTrack(val);
+        setSubject('all');
+    };
 
     const handleSearchSubmit = (event) => {
         event.preventDefault();
-        fetchCourses(query);
+        fetchCourses(query, educationType, stage, gradeLevel, track, subject, isFreeOnly);
     };
 
     const handleClearQuery = () => {
         setQuery('');
-        // fetchCourses(''); => effect will handle this when debouncedQuery becomes ''
     };
 
     return (
@@ -127,12 +133,21 @@ export default function ExploreContent() {
                         isSearching={isSearching || query !== debouncedQuery}
                     />
                     <CourseFilters
-                        filters={COURSE_FILTERS}
-                        activeFilter={activeFilter}
-                        onChange={setActiveFilter}
+                        educationType={educationType}
+                        setEducationType={handleSetEducationType}
+                        stage={stage}
+                        setStage={handleSetStage}
+                        gradeLevel={gradeLevel}
+                        setGradeLevel={handleSetGradeLevel}
+                        track={track}
+                        setTrack={handleSetTrack}
+                        subject={subject}
+                        setSubject={setSubject}
+                        isFreeOnly={isFreeOnly}
+                        setIsFreeOnly={setIsFreeOnly}
                     />
                     <CourseGrid
-                        courses={visibleCourses}
+                        courses={courses}
                         loading={loading}
                         hasQuery={Boolean(query.trim())}
                         onClearQuery={handleClearQuery}

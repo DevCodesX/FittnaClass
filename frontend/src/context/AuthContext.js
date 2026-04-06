@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
@@ -69,6 +69,12 @@ function broadcastAuthChange() {
 
 export function AuthProvider({ children }) {
     const router = useRouter();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
     const session = useSyncExternalStore(subscribeToSession, readSession, () => EMPTY_SESSION);
 
     const login = useCallback((userData, authToken) => {
@@ -76,8 +82,16 @@ export function AuthProvider({ children }) {
         localStorage.setItem('fittnaclass_user', JSON.stringify(userData));
         broadcastAuthChange();
 
-        if (userData.role === 'instructor') {
-            router.push('/instructor/dashboard');
+        // Check if there's a pending invite — always redirect to teacher dashboard
+        const pendingInvite = localStorage.getItem('fittnaclass_pending_invite');
+        if (pendingInvite) {
+            localStorage.removeItem('fittnaclass_pending_invite');
+            router.push('/Teacher/dashboard');
+            return;
+        }
+
+        if (userData.role === 'instructor' || userData.role === 'assistant') {
+            router.push('/Teacher/dashboard');
         } else {
             router.push('/student/explore');
         }
@@ -90,13 +104,19 @@ export function AuthProvider({ children }) {
         router.push('/?auth=login');
     }, [router]);
 
+    const updateSession = useCallback((updatedUserData) => {
+        localStorage.setItem('fittnaclass_user', JSON.stringify(updatedUserData));
+        broadcastAuthChange();
+    }, []);
+
     const value = useMemo(() => ({
         user: session.user,
         token: session.token,
-        isLoading: false,
+        isLoading: !isClient,
         login,
         logout,
-    }), [session.user, session.token, login, logout]);
+        updateSession,
+    }), [session.user, session.token, isClient, login, logout, updateSession]);
 
     return (
         <AuthContext.Provider value={value}>

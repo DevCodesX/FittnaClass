@@ -1,0 +1,114 @@
+﻿Token generated for user id=1
+Testing endpoints against http://localhost:5000...
+
+
+=== /api/notifications/unread-count ===
+Status: 200
+Response: {
+  "success": true,
+  "count": 0
+}
+
+=== /api/student/planner?date_from=2026-04-04&date_to=2026-04-10 ===
+Status: 200
+Response: {
+  "success": true,
+  "data": {
+    "days": {
+      "2026-04-04": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      },
+      "2026-04-05": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      },
+      "2026-04-06": {
+        "plan_id": 4,
+        "tasks": [
+          {
+            "id": 6,
+            "plan_id": 4,
+            "type": "lesson",
+            "lesson_id": 8,
+            "title": "Your_20s__The_Time_to_Invest_in_Your_Future",
+            "status": "pending",
+            "order_index": 1,
+            "metadata": {
+              "duration": null,
+              "course_name": "Physics",
+              "ai_generated": true
+            },
+            "createdAt": "2026-04-05T15:08:43.000Z",
+            "updatedAt": "2026-04-05T15:08:43.000Z",
+            "lesson": {
+              "id": 8,
+              "title": "Your_20s__The_Time_to_Invest_in_Your_Future",
+              "duration": null,
+              "section_id": 5,
+              "section": {
+                "id": 5,
+                "curriculum_id": 3
+              }
+            },
+            "curriculum_id": 3
+          }
+        ],
+        "progress": {
+          "total": 1,
+          "completed": 0
+        }
+      },
+      "2026-04-07": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      },
+      "2026-04-08": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      },
+      "2026-04-09": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      },
+      "2026-04-10": {
+        "tasks": [],
+        "progress": {
+          "total": 0,
+          "completed": 0
+        }
+      }
+    },
+    "overall_progress": {
+      "total": 1,
+      "completed": 0
+    }
+  }
+}
+
+=== /api/student/planner/srs/stats ===
+Status: 200
+Response: {
+  "success": true,
+  "data": {
+    "total_tracked": 0,
+    "due_today": 0,
+    "overdue": 0,
+    "upcoming": 0
+  }
+}

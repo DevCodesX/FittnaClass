@@ -28,6 +28,12 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
         allowNull: true,
     },
 }, {
+    indexes: [
+        {
+            unique: true,
+            fields: ['instructor_id', 'provider'],
+        },
+    ],
     tableName: 'payment_methods',
     timestamps: true,
 });

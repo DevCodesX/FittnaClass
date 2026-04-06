@@ -15,11 +15,11 @@ const Enrollment = sequelize.define('Enrollment', {
             key: 'id',
         },
     },
-    course_id: {
+    curriculum_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'courses',
+            model: 'curricula',
             key: 'id',
         },
     },
@@ -32,10 +32,45 @@ const Enrollment = sequelize.define('Enrollment', {
         allowNull: false,
         defaultValue: 'pending',
     },
+    is_suspended: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    receipt_uploaded_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    reviewed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     enrollment_date: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
+    },
+    coupon_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'coupons',
+            key: 'id',
+        },
+    },
+    discount_applied: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+    },
+    final_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+    },
+    payment_type: {
+        type: DataTypes.ENUM('full', 'installment'),
+        allowNull: false,
+        defaultValue: 'full',
     },
 }, {
     tableName: 'enrollments',
@@ -43,8 +78,8 @@ const Enrollment = sequelize.define('Enrollment', {
     indexes: [
         {
             unique: true,
-            fields: ['student_id', 'course_id'],
-            name: 'unique_student_course',
+            fields: ['student_id', 'curriculum_id'],
+            name: 'unique_student_curriculum',
         },
     ],
 });

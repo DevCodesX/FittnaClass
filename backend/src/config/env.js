@@ -30,4 +30,8 @@ module.exports = {
     maxVideoFileSize: parseInt(process.env.MAX_VIDEO_FILE_SIZE) || 100 * 1024 * 1024, // 100MB
     dir: process.env.UPLOAD_DIR || 'uploads',
   },
+
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY,
+  },
 };

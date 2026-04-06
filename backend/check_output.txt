@@ -1,0 +1,99 @@
+﻿Executing (default): SELECT 1+1 AS result
+Executing (default): SHOW TABLES
+=== POTENTIAL CONFLICTS ===
+contents table: EXISTS (LEGACY!)
+lessons table: EXISTS
+courses table: EXISTS (LEGACY!)
+curricula table: EXISTS
+course_admins table: EXISTS (LEGACY!)
+
+=== CONTENTS TABLE COLUMNS ===
+Executing (default): SHOW COLUMNS FROM contents
+  id | int
+  course_id | int
+  video_url | varchar(500)
+  thumbnail_url | varchar(500)
+  title | varchar(255)
+  duration | varchar(20)
+  quality | varchar(20)
+  file_size | bigint
+  original_filename | varchar(255)
+  order | int
+  created_at | datetime
+  updated_at | datetime
+
+=== CHECKING FOR SYNC ERRORS ===
+Trying to see what ALTER statements sequelize would generate...
+Executing (default): SELECT id, name, email, role FROM users WHERE role = 'student'
+
+=== STUDENT USERS ===
+  id=1 name=Ahmed Omar email=ahmed@gmail.com
+  id=27 name=Youseef email=you@gmail.com
+  id=30 name=sayed email=sayed@gmail.com
+  id=31 name=fjghufh email=hhhhhh@gmail.com
+  id=34 name=╪╣┘à╪▒┘ê email=amr@gmail.com
+  id=35 name=Ahmed Omar AbuElwafa email=a7med3mar@gmail.com
+
+=== TESTING sync({ alter: true }) on each model ===
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'notifications' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `notifications`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'notifications' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='notifications' AND constraint_name = 'notifications_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `notifications` DROP FOREIGN KEY `notifications_ibfk_1`;
+Executing (default): ALTER TABLE `notifications` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `notifications` CHANGE `type` `type` VARCHAR(100) NOT NULL;
+Executing (default): ALTER TABLE `notifications` CHANGE `title` `title` VARCHAR(255) NOT NULL;
+Executing (default): ALTER TABLE `notifications` CHANGE `message` `message` TEXT NOT NULL;
+Executing (default): ALTER TABLE `notifications` CHANGE `is_read` `is_read` TINYINT(1) NOT NULL DEFAULT false;
+Executing (default): ALTER TABLE `notifications` CHANGE `metadata` `metadata` JSON;
+Executing (default): ALTER TABLE `notifications` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `notifications` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `notifications`
+  Notification: sync OK
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'study_plans' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `study_plans`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'study_plans' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='study_plans' AND constraint_name = 'study_plans_ibfk_1' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `study_plans` DROP FOREIGN KEY `study_plans_ibfk_1`;
+Executing (default): ALTER TABLE `study_plans` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `study_plans` CHANGE `date` `date` DATE NOT NULL COMMENT 'Plan date in YYYY-MM-DD format';
+Executing (default): ALTER TABLE `study_plans` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `study_plans` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `study_plans`
+  StudyPlan: sync OK
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'study_tasks' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `study_tasks`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'study_tasks' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='study_tasks' AND constraint_name = 'study_tasks_ibfk_27' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `study_tasks` DROP FOREIGN KEY `study_tasks_ibfk_27`;
+Executing (default): ALTER TABLE `study_tasks` ADD FOREIGN KEY (`plan_id`) REFERENCES `study_plans` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `study_tasks` CHANGE `type` `type` ENUM('lesson', 'custom', 'timer', 'review') NOT NULL DEFAULT 'custom';
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='study_tasks' AND constraint_name = 'study_tasks_ibfk_28' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `study_tasks` DROP FOREIGN KEY `study_tasks_ibfk_28`;
+Executing (default): ALTER TABLE `study_tasks` ADD FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `study_tasks` CHANGE `title` `title` VARCHAR(255) NOT NULL COMMENT 'Block title ΓÇö auto-filled from lesson or entered by student';
+Executing (default): ALTER TABLE `study_tasks` CHANGE `status` `status` ENUM('pending', 'completed') NOT NULL DEFAULT 'pending';
+Executing (default): ALTER TABLE `study_tasks` CHANGE `order_index` `order_index` INTEGER NOT NULL DEFAULT 0;
+Executing (default): ALTER TABLE `study_tasks` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `study_tasks` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `study_tasks` CHANGE `metadata` `metadata` JSON COMMENT 'Extra data: { duration, course_name, srs_id, ... }';
+Executing (default): SHOW INDEX FROM `study_tasks`
+  StudyTask: sync OK
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'spaced_repetitions' AND TABLE_SCHEMA = 'fittnaclass'
+Executing (default): SHOW FULL COLUMNS FROM `spaced_repetitions`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'spaced_repetitions' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='fittnaclass' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='spaced_repetitions' AND constraint_name = 'spaced_repetitions_ibfk_11' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `spaced_repetitions` DROP FOREIGN KEY `spaced_repetitions_ibfk_11`;
+Executing (default): ALTER TABLE `spaced_repetitions` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): SELECT CONSTRAINT_CATALOG AS constraintCatalog, CONSTRAINT_NAME AS constraintName, CONSTRAINT_SCHEMA AS constraintSchema, CONSTRAINT_TYPE AS constraintType, TABLE_NAME AS tableName, TABLE_SCHEMA AS tableSchema from INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name='spaced_repetitions' AND constraint_name = 'spaced_repetitions_ibfk_12' AND TABLE_SCHEMA = 'fittnaclass';
+Executing (default): ALTER TABLE `spaced_repetitions` DROP FOREIGN KEY `spaced_repetitions_ibfk_12`;
+Executing (default): ALTER TABLE `spaced_repetitions` ADD FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `ease_factor` `ease_factor` FLOAT NOT NULL DEFAULT 2.5 COMMENT 'SM-2 ease factor, starts at 2.5';
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `interval` `interval` FLOAT NOT NULL DEFAULT 0 COMMENT 'Current interval in days';
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `repetition_count` `repetition_count` INTEGER NOT NULL DEFAULT 0;
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `next_review_date` `next_review_date` DATE COMMENT 'Next scheduled review date (YYYY-MM-DD)';
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `last_reviewed_at` `last_reviewed_at` DATETIME;
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `created_at` `created_at` DATETIME NOT NULL;
+Executing (default): ALTER TABLE `spaced_repetitions` CHANGE `updated_at` `updated_at` DATETIME NOT NULL;
+Executing (default): SHOW INDEX FROM `spaced_repetitions`
+  SpacedRepetition: sync OK

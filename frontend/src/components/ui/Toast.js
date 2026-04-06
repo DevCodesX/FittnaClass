@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 const ToastContext = createContext(null);
 
@@ -22,20 +22,13 @@ export function ToastProvider({ children }) {
         }, duration);
     }, []);
 
-    const toast = useCallback({
+    // Memoize the toast methods object so it has a stable reference
+    const toastMethods = useMemo(() => ({
         success: (msg) => addToast(msg, 'success'),
         error: (msg) => addToast(msg, 'error'),
         info: (msg) => addToast(msg, 'info'),
         warning: (msg) => addToast(msg, 'warning'),
-    }, [addToast]);
-
-    // Fix: Make toast methods stable
-    const toastMethods = {
-        success: (msg) => addToast(msg, 'success'),
-        error: (msg) => addToast(msg, 'error'),
-        info: (msg) => addToast(msg, 'info'),
-        warning: (msg) => addToast(msg, 'warning'),
-    };
+    }), [addToast]);
 
     return (
         <ToastContext.Provider value={toastMethods}>

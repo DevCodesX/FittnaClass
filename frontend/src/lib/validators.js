@@ -1,28 +1,28 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-    email: z.string().email('Please enter a valid email address'),
-    password: z.string().min(1, 'Password is required'),
+    email: z.string().email('البريد الإلكتروني غير صحيح'),
+    password: z.string().min(1, 'كلمة المرور مطلوبة'),
 });
 
 export const registerStep1Schema = z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-    email: z.string().email('Please enter a valid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-    role: z.enum(['student', 'instructor'], { required_error: 'Please select a role' }),
+    name: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل').max(100),
+    email: z.string().email('البريد الإلكتروني غير صحيح'),
+    password: z.string().min(6, 'كلمة المرور يجب أن لا تقل عن 6 أحرف'),
+    role: z.enum(['student', 'instructor', 'assistant'], { required_error: 'يرجى تحديد نوع الحساب' }),
 });
 
 export const registerStudentStep2Schema = z.object({
     national_id: z
         .string()
-        .length(14, 'National ID must be exactly 14 digits')
-        .regex(/^\d{14}$/, 'National ID must contain only digits'),
-    grade_level: z.string().min(1, 'Grade level is required'),
+        .length(14, 'الرقم القومي يجب أن يتكون من 14 رقماً')
+        .regex(/^\d{14}$/, 'الرقم القومي يجب أن يحتوي على أرقام فقط'),
+    grade_level: z.string().min(1, 'يرجى تحديد المرحلة الدراسية'),
 });
 
-export const registerInstructorStep2Schema = z.object({
-    specialization: z.string().min(1, 'Specialization is required'),
-    subject: z.string().min(1, 'Subject is required'),
+export const registerTeacherStep2Schema = z.object({
+    specialization: z.string().min(1, 'التخصص مطلوب'),
+    subject: z.string().min(1, 'اسم المادة مطلوب'),
     bio: z.string().optional(),
 });
 
@@ -31,7 +31,27 @@ export const courseSchema = z.object({
     description: z.string().optional(),
     subject: z.string().min(1, 'Subject is required'),
     category: z.string().optional(),
-    price: z.coerce.number().min(0, 'Price must be a positive number'),
+    is_free_lesson: z.boolean().optional().default(false),
+    price: z.coerce.number().optional(),
+}).superRefine((data, ctx) => {
+    if (data.is_free_lesson) {
+        if (Number(data.price ?? 0) !== 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['price'],
+                message: 'Price must be 0 when free lesson is enabled',
+            });
+        }
+        return;
+    }
+
+    if (!Number.isFinite(Number(data.price)) || Number(data.price) <= 0) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['price'],
+            message: 'Price must be greater than 0',
+        });
+    }
 });
 
 export const paymentSchema = z.object({
